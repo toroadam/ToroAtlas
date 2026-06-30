@@ -1,0 +1,121 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum WorkspaceRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+model Organization {
+  id              String               @id @default(cuid())
+  clerkOrgId      String               @unique @map("clerk_org_id")
+  slug           String               @unique
+  name           String
+  createdAt       DateTime             @default(now()) @map("created_at")
+  updatedAt       DateTime             @updatedAt @map("updated_at")
+  workspaces     Workspace[]
+  memberships    OrganizationMember[]
+  products       Product[]
+  projects       Project[]
+  decisionRecords DecisionRecord[]
+
+  @@index([slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id                String        @id @default(cuid())
+  organizationId    String        @map("organization_id")
+  userId            String        @map("user_id")
+  clerkMembershipId String?       @unique @map("clerk_membership_id")
+  role              WorkspaceRole @default(MEMBER)
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  organization      Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+  @@map("organization_members")
+}
+
+model Workspace {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  slug            String
+  name            String
+  createdByUserId String       @map("created_by_user_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  products        Product[]
+  projects        Project[]
+  decisionRecords DecisionRecord[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId, createdAt])
+  @@map("workspaces")
+}
+
+model Product {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  workspaceId     String       @map("workspace_id")
+  slug            String
+  name            String
+  createdByUserId String       @map("created_by_user_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  projects        Project[]
+  decisionRecords DecisionRecord[]
+
+  @@unique([workspaceId, slug])
+  @@index([organizationId, workspaceId])
+  @@map("products")
+}
+
+model Project {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  workspaceId     String       @map("workspace_id")
+  productId       String?      @map("product_id")
+  name            String
+  description     String?
+  createdByUserId String       @map("created_by_user_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product         Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, workspaceId, productId])
+  @@index([workspaceId, createdAt])
+  @@map("projects")
+}
+
+model DecisionRecord {
+  id              String       @id @default(cuid())
+  organizationId  String       @map("organization_id")
+  workspaceId     String       @map("workspace_id")
+  productId       String?      @map("product_id")
+  title           String
+  rationale       String
+  createdByUserId String       @map("created_by_user_id")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspace       Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  product         Product?     @relation(fields: [productId], references: [id], onDelete: SetNull)
+
+  @@index([organizationId, workspaceId, productId, createdAt])
+  @@map("decision_records")
+}

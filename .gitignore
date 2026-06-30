@@ -1,0 +1,12 @@
+node_modules/
+.DS_Store
+*.tsbuildinfo
+
+packages/web/node_modules/
+packages/web/.next/
+
+# Environment files
+.env
+.env.*
+!.env.example
+!**/.env.example
