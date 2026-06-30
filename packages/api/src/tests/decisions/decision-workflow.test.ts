@@ -116,82 +116,82 @@ test("workflow transition guard returns deterministic errors for invalid request
       allowedTransitions: DECISION_LIFECYCLE_TRANSITIONS.framing,
     },
   });
+});
 
-  test("workflow checklist enforcement blocks approved transition when required criteria fail", async () => {
-    const repository = new InMemoryProductDecisionRepository();
-    const decisionService = createDecisionService({ repository });
+test("workflow checklist enforcement blocks approved transition when required criteria fail", async () => {
+  const repository = new InMemoryProductDecisionRepository();
+  const decisionService = createDecisionService({ repository });
 
-    const createResponse = buildResponseRecorder();
-    await createDecisionRouteHandler(
-      {
-        tenantContext: buildTenantContext(),
-        body: {
-          ...validDecisionBody,
-          framing: {
-            ...validDecisionBody.framing,
-            rationale: "short",
-          },
+  const createResponse = buildResponseRecorder();
+  await createDecisionRouteHandler(
+    {
+      tenantContext: buildTenantContext(),
+      body: {
+        ...validDecisionBody,
+        framing: {
+          ...validDecisionBody.framing,
+          rationale: "short",
         },
       },
-      createResponse.response,
-      { decisionService },
-    );
-    const decisionId = (
-      createResponse.read().payload as {
-        data: { decision: { id: string } };
-      }
-    ).data.decision.id;
+    },
+    createResponse.response,
+    { decisionService },
+  );
+  const decisionId = (
+    createResponse.read().payload as {
+      data: { decision: { id: string } };
+    }
+  ).data.decision.id;
 
-    const toResearch = buildResponseRecorder();
-    await transitionDecisionRouteHandler(
-      {
-        tenantContext: buildTenantContext(),
-        params: { decisionId },
-        body: { targetStatus: "research" },
-      },
-      toResearch.response,
-      { decisionService },
-    );
-    assert.equal(toResearch.read().statusCode, 200);
+  const toResearch = buildResponseRecorder();
+  await transitionDecisionRouteHandler(
+    {
+      tenantContext: buildTenantContext(),
+      params: { decisionId },
+      body: { targetStatus: "research" },
+    },
+    toResearch.response,
+    { decisionService },
+  );
+  assert.equal(toResearch.read().statusCode, 200);
 
-    const toAlignment = buildResponseRecorder();
-    await transitionDecisionRouteHandler(
-      {
-        tenantContext: buildTenantContext(),
-        params: { decisionId },
-        body: { targetStatus: "alignment" },
-      },
-      toAlignment.response,
-      { decisionService },
-    );
-    assert.equal(toAlignment.read().statusCode, 200);
+  const toAlignment = buildResponseRecorder();
+  await transitionDecisionRouteHandler(
+    {
+      tenantContext: buildTenantContext(),
+      params: { decisionId },
+      body: { targetStatus: "alignment" },
+    },
+    toAlignment.response,
+    { decisionService },
+  );
+  assert.equal(toAlignment.read().statusCode, 200);
 
-    const toApproved = buildResponseRecorder();
-    await transitionDecisionRouteHandler(
-      {
-        tenantContext: buildTenantContext(),
-        params: { decisionId },
-        body: { targetStatus: "approved" },
-      },
-      toApproved.response,
-      { decisionService },
-    );
+  const toApproved = buildResponseRecorder();
+  await transitionDecisionRouteHandler(
+    {
+      tenantContext: buildTenantContext(),
+      params: { decisionId },
+      body: { targetStatus: "approved" },
+    },
+    toApproved.response,
+    { decisionService },
+  );
 
-    const approvedResult = toApproved.read();
-    assert.equal(approvedResult.statusCode, 422);
-    assert.deepEqual(approvedResult.payload, {
-      error: "DECISION_CHECKLIST_INCOMPLETE",
-      message: "Decision checklist requirements are not met for transition to 'approved'.",
-      details: {
-        targetStatus: "approved",
-        failedCriteria: [
-          {
-            id: "rationale-defined",
-            reason: "rationale must include at least 10 characters.",
-          },
-        ],
-      },
-    });
+  const approvedResult = toApproved.read();
+  assert.equal(approvedResult.statusCode, 422);
+  assert.deepEqual(approvedResult.payload, {
+    error: "DECISION_CHECKLIST_INCOMPLETE",
+    message: "Decision checklist requirements are not met for transition to 'approved'.",
+    details: {
+      targetStatus: "approved",
+      failedCriteria: [
+        {
+          id: "rationale-defined",
+          reason: "rationale must include at least 10 characters.",
+        },
+      ],
+    },
   });
 });
 
